@@ -846,13 +846,19 @@ def energy_page():
                     fig.add_trace(go.Box(y=s_norm, name=col, boxmean='sd'))
 
             elif graph_type == "Corrélation matricielle":
-                corr = df[numeric_cols].corr()
-                fig = go.Figure(go.Heatmap(
-                    z=corr.values, x=corr.columns, y=corr.columns,
-                    colorscale=[[0,'#020817'],[0.5,'#7700ff'],[1,'#00ccff']],
-                    zmid=0, text=np.round(corr.values, 2), texttemplate="%{text}",
-                    colorbar=dict(tickfont=dict(color='#c0d0ff'))
-                ))
+                numeric_df = df[numeric_cols].apply(pd.to_numeric, errors='coerce')
+                numeric_df = numeric_df.loc[:, numeric_df.notna().any()]
+                if numeric_df.shape[1] < 2:
+                    st.warning("Pas assez de colonnes numériques valides pour générer une matrice de corrélation.")
+                    fig = go.Figure()
+                else:
+                    corr = numeric_df.corr()
+                    fig = go.Figure(go.Heatmap(
+                        z=corr.values, x=corr.columns, y=corr.columns,
+                        colorscale=[[0,'#020817'],[0.5,'#7700ff'],[1,'#00ccff']],
+                        zmid=0, text=np.round(corr.values, 2), texttemplate="%{text}",
+                        colorbar=dict(tickfont=dict(color='#c0d0ff'))
+                    ))
 
             else:  # Violin
                 fig = go.Figure()
