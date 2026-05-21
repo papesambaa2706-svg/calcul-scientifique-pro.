@@ -202,6 +202,121 @@ class DataScienceEngine:
         return list(ks), inertias, silhouettes
 
 
+def _label_qualite_r2(r2: float) -> str:
+    if r2 >= 0.95: return "excellente (quasi-parfaite)"
+    if r2 >= 0.85: return "très bonne"
+    if r2 >= 0.70: return "bonne"
+    if r2 >= 0.50: return "moyenne"
+    return "faible — à améliorer"
+
+
+def _interprete_correlation(val: float) -> str:
+    a = abs(val)
+    signe = "positive" if val > 0 else "négative"
+    if a >= 0.9:  return f"corrélation {signe} très forte ({val:.2f})"
+    if a >= 0.7:  return f"corrélation {signe} forte ({val:.2f})"
+    if a >= 0.5:  return f"corrélation {signe} modérée ({val:.2f})"
+    if a >= 0.3:  return f"corrélation {signe} faible ({val:.2f})"
+    return f"corrélation quasi-nulle ({val:.2f})"
+
+
+def _interprete_skewness(skew: float) -> str:
+    if abs(skew) < 0.5:
+        return "distribution quasi symétrique"
+    if skew > 0:
+        return "distribution asymétrique à droite (queues de valeurs élevées)"
+    return "distribution asymétrique à gauche (queues de valeurs basses)"
+
+
+def _interprete_kurtosis(kurt: float) -> str:
+    if abs(kurt) < 1:
+        return "queue de distribution proche de la normale"
+    if kurt > 1:
+        return "queue épaisse — risques d'outliers"
+    return "queue légère — distribution concentrée"
+
+
+def generer_analyse_automatique(section: str, info: dict) -> str:
+    lignes = [f"**Section :** {section}"]
+    if section == "📋 Profil":
+        lignes.append(
+            f"Le dataset contient **{info.get('n_rows', 0)} lignes** et **{info.get('n_numeric', 0)} variables numériques**."
+        )
+        lignes.append(
+            f"La colonne **{info.get('col_out', 'N/A')}** présente **{info.get('n_out', 0)} outliers détectés** par Z-score > 3."
+        )
+        if info.get('missing_pct', 0) > 0:
+            lignes.append(
+                f"Il y a **{info['missing_pct']:.1f}% de valeurs manquantes** — un nettoyage ou une imputation est recommandé."
+            )
+    elif section == "📊 Visualisation":
+        lignes.append(f"Graphique sélectionné : **{info.get('graph_type', 'N/A')}**.")
+        if info.get('corr_coef') is not None:
+            lignes.append(
+                f"La relation entre **{info.get('x_col')}** et **{info.get('y_col')}** est {_interprete_correlation(info['corr_coef'])}."
+            )
+            lignes.append(
+                f"La pente estimée est {info.get('slope'):.3f}, suggérant {'une montée' if info.get('slope') > 0 else 'une baisse'} de la variable Y lorsque X augmente."
+            )
+    elif section == "🔗 Corrélations":
+        top_corr = info.get('top_corr', [])
+        if top_corr:
+            lignes.append(
+                f"Les plus fortes corrélations sont : {', '.join([f'**{a} vs {b}** ({_interprete_correlation(v)})' for a,b,v in top_corr])}."
+            )
+    elif section == "🤖 Machine Learning":
+        lignes.append(
+            f"Modèle **{info.get('model_name', 'N/A')}** sur cible **{info.get('target', 'N/A')}** avec **{info.get('n_features', 0)} features**."
+        )
+        lignes.append(
+            f"R² = {info.get('r2', 0):.3f}, RMSE = {info.get('rmse', 0):.3f}, MAE = {info.get('mae', 0):.3f}."
+        )
+        lignes.append(
+            f"CV R² (5-fold) = {info.get('cv_mean', 0):.3f} ± {info.get('cv_std', 0):.3f}."
+        )
+    elif section == "🔬 PCA":
+        lignes.append(
+            f"Les {info.get('n_comp', 0)} premières composantes expliquent **{info.get('variance_expliquee', 0):.1f}%** de la variance."
+        )
+        if info.get('cumul_90', False):
+            lignes.append("La variance cumulée dépasse 90%, ce qui est satisfaisant pour une réduction de dimension.")
+    elif section == "🧩 Clustering":
+        lignes.append(
+            f"K-Means avec **k={info.get('n_clusters', 0)}** montre un score silhouette de {info.get('silhouette', 0):.3f}."
+        )
+        if info.get('elbow_k'):
+            lignes.append(
+                f"La méthode du coude suggère une bonne structure autour de **k={info['elbow_k']}**."
+            )
+    else:
+        lignes.append("Analyse automatique disponible pour la majorité des sections de Data Science.")
+    return "\n\n".join(lignes)
+
+
+def generer_conclusion_automatique(section: str, info: dict) -> str:
+    if section == "📋 Profil":
+        missing_pct = info.get('missing_pct', 0)
+        return (
+            f"Le profil indique une qualité de données {'correcte' if missing_pct < 10 else 'à améliorer'} "
+            f"avec {missing_pct:.1f}% de valeurs manquantes."
+        )
+    if section == "📊 Visualisation":
+        return "Les visualisations identifient les tendances et relations clés à vérifier en priorité."
+    if section == "🔗 Corrélations":
+        return "Les corrélations fortes guident le choix des variables explicatives et aident à réduire la dimensionnalité."
+    if section == "🤖 Machine Learning":
+        r2 = info.get('r2', 0)
+        return (
+            f"Le modèle présente une qualité {'élevée' if r2 > 0.8 else 'modérée' if r2 > 0.6 else 'faible'}. "
+            + ("Poursuivre le déploiement." if r2 > 0.8 else "Envisager un tuning ou plus de données." if r2 > 0.6 else "Revenir sur le jeu de features et le nettoyage.")
+        )
+    if section == "🔬 PCA":
+        return "La PCA permet de compresser les données tout en conservant l’essentiel de la variance."
+    if section == "🧩 Clustering":
+        return "Le clustering révèle la structure interne des données et aide à segmenter les observations."
+    return "Analyse automatique complète du module Data Science." 
+
+
 # ============================================================
 # PAGE PRINCIPALE
 # ============================================================
@@ -237,6 +352,7 @@ def data_science_page():
 
     engine = DataScienceEngine(df)
     numeric_cols = engine.numeric_cols
+    summary_context = {}
 
     if not numeric_cols:
         st.error("❌ Aucune colonne numérique détectée.")
@@ -316,6 +432,15 @@ def data_science_page():
         )
         st.plotly_chart(fig_out, use_container_width=True)
 
+        summary_context.update({
+            "section": section,
+            "n_rows": df.shape[0],
+            "n_numeric": len(numeric_cols),
+            "col_out": col_out,
+            "n_out": int(n_out),
+            "missing_pct": float(df.isnull().mean().mean() * 100),
+        })
+
     # ============================================================
     # TAB 2 : VISUALISATION
     # ============================================================
@@ -333,6 +458,8 @@ def data_science_page():
                                   index=min(1, len(numeric_cols)-1), key="vy")
 
         with col2:
+            corr_coef = None
+            slope = None
             if graph_type == "Scatter + tendance":
                 fig = go.Figure()
                 fig.add_trace(go.Scatter(
@@ -346,6 +473,7 @@ def data_science_page():
                 mask = df[[x_col, y_col]].dropna()
                 if len(mask) > 2:
                     slope, intercept, r, p, se = stats.linregress(mask[x_col], mask[y_col])
+                    corr_coef = r
                     x_r = np.linspace(mask[x_col].min(), mask[x_col].max(), 200)
                     fig.add_trace(go.Scatter(
                         x=x_r, y=slope*x_r + intercept, mode='lines',
@@ -416,6 +544,17 @@ def data_science_page():
             )
             st.plotly_chart(fig, use_container_width=True)
 
+            summary_context.update({
+                "section": section,
+                "n_rows": df.shape[0],
+                "n_numeric": len(numeric_cols),
+                "graph_type": graph_type,
+                "x_col": x_col,
+                "y_col": y_col,
+                "corr_coef": float(corr_coef) if corr_coef is not None else None,
+                "slope": float(slope) if slope is not None else None,
+            })
+
     # ============================================================
     # TAB 3 : CORRÉLATIONS
     # ============================================================
@@ -455,6 +594,18 @@ def data_science_page():
                 })
         df_pairs = pd.DataFrame(corr_pairs).sort_values("|r|", ascending=False)
         st.dataframe(df_pairs, use_container_width=True)
+
+        top_corr = [
+            (row['Variable 1'], row['Variable 2'], float(row['Corrélation']))
+            for _, row in df_pairs.head(3).iterrows()
+        ]
+        summary_context.update({
+            "section": section,
+            "n_rows": df.shape[0],
+            "n_numeric": len(numeric_cols),
+            "corr_method": corr_method,
+            "top_corr": top_corr,
+        })
 
     # ============================================================
     # TAB 4 : MACHINE LEARNING
@@ -525,6 +676,20 @@ def data_science_page():
                     legend=dict(bgcolor='rgba(0,0,0,0.5)'), height=380,
                 )
                 st.plotly_chart(fig_pred, use_container_width=True)
+
+                summary_context.update({
+                    "section": section,
+                    "n_rows": df.shape[0],
+                    "n_numeric": len(numeric_cols),
+                    "target": target,
+                    "n_features": len(features),
+                    "model_name": modele_nom,
+                    "r2": float(res['r2']),
+                    "rmse": float(res['rmse']),
+                    "mae": float(res['mae']),
+                    "cv_mean": float(res['cv_mean']),
+                    "cv_std": float(res['cv_std']),
+                })
 
                 # Résidus
                 fig_res = make_subplots(rows=1, cols=2,
@@ -648,6 +813,15 @@ def data_science_page():
             st.markdown("#### 📐 Loadings (contributions)")
             st.dataframe(pca_res['loadings'].round(4), use_container_width=True)
 
+            summary_context.update({
+                "section": section,
+                "n_rows": df.shape[0],
+                "n_numeric": len(numeric_cols),
+                "n_comp": int(n_comp),
+                "variance_expliquee": float(pca_res['explained_variance'][:n_comp].sum() * 100),
+                "cumul_90": bool(pca_res['cumulative'][:n_comp].sum() >= 0.90),
+            })
+
     # ============================================================
     # TAB 6 : CLUSTERING
     # ============================================================
@@ -696,6 +870,15 @@ def data_science_page():
             )
             st.plotly_chart(fig_cl, use_container_width=True)
 
+            summary_context.update({
+                "section": section,
+                "n_rows": df.shape[0],
+                "n_numeric": len(numeric_cols),
+                "n_clusters": int(n_clust),
+                "silhouette": float(clust_res['silhouette']),
+                "inertia": float(clust_res['inertia']),
+            })
+
         if show_elbow:
             st.markdown("#### 📉 Méthode du coude")
             ks, inertias, silhouettes = engine.elbow_method(k_max=8)
@@ -715,6 +898,11 @@ def data_science_page():
                 paper_bgcolor='rgba(0,0,0,0)', plot_bgcolor='rgba(255,255,255,0.92)',
                 font=dict(color='#c0d0ff'), height=320, showlegend=False
             )
+            elbow_k = ks[int(np.argmax(silhouettes))] if len(silhouettes) > 0 else None
+            if elbow_k is not None:
+                summary_context.update({
+                    "elbow_k": int(elbow_k)
+                })
             fig_elb.update_xaxes(gridcolor='rgba(100,0,255,0.2)', color='#c0d0ff',
                                   title_text="k")
             fig_elb.update_yaxes(gridcolor='rgba(100,0,255,0.2)', color='#c0d0ff')
@@ -750,6 +938,15 @@ def data_science_page():
             "Géron — *Hands-On Machine Learning* (O'Reilly, 2022)",
         ]:
             st.markdown(f"- {r}")
+
+    # Analyse automatique finale
+    if summary_context:
+        st.markdown("---")
+        st.markdown("### 📝 Analyse automatique")
+        st.markdown(generer_analyse_automatique(section, summary_context))
+        st.markdown("---")
+        st.markdown("### ✅ Conclusion automatique")
+        st.markdown(generer_conclusion_automatique(section, summary_context))
 
     # Export
     st.markdown("---")

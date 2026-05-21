@@ -382,6 +382,22 @@ def _interprete_correlation(val: float) -> str:
     return f"corrélation quasi-nulle ({val:.2f})"
 
 
+def _interprete_skewness(skew: float) -> str:
+    if abs(skew) < 0.5:
+        return "distribution quasi symétrique"
+    if skew > 0:
+        return "distribution asymétrique à droite (valeurs extrêmes élevées)"
+    return "distribution asymétrique à gauche (valeurs extrêmes basses)"
+
+
+def _interprete_kurtosis(kurt: float) -> str:
+    if abs(kurt) < 1:
+        return "queue de distribution proche de la normale"
+    if kurt > 1:
+        return "queue épaisse — risque d'outliers fréquents"
+    return "queue légère — données concentrées autour de la moyenne"
+
+
 def generer_analyse_msd(info: dict) -> str:
     """Génère une analyse textuelle avancée et automatique de la section MSD."""
     lignes = []
@@ -596,39 +612,80 @@ def generer_analyse_automatique(section: str, info: dict) -> str:
         mean = info.get('mean', 0)
         std  = info.get('std', 0)
         out  = info.get('outliers', 0)
+        skew = info.get('skew', 0)
+        kurt = info.get('kurtosis', 0)
         cv   = abs(std / mean * 100) if mean != 0 else 0
+        quartile_gap = info.get('q90', 0) - info.get('q10', 0)
         lignes.append(
-            f"La variable **{col}** présente une moyenne de **{mean:.2f}** et un écart-type de **{std:.2f}** "
-            f"(CV = {cv:.1f}%). "
-            + (f"**{out} valeurs aberrantes** détectées par la méthode IQR — une investigation est recommandée."
-               if out > 0 else "Aucune valeur aberrante IQR détectée.")
+            f"La variable **{col}** présente une moyenne de **{mean:.2f}**, un écart-type de **{std:.2f}** "
+            f"(CV = {cv:.1f}%) et un écart inter-quantile P10-P90 de **{quartile_gap:.2f}**."
         )
+        lignes.append(
+            f"L'analyse de la distribution révèle une {_interprete_skewness(skew)} "
+            f"et {_interprete_kurtosis(kurt)}."
+        )
+        out_msg = "vérifiez les mesures et capteurs" if out > 0 else "pas d'anomalies majeures identifiées"
+        lignes.append(f"{out} valeurs aberrantes IQR détectées — {out_msg}.")
         if cv > 50:
-            lignes.append("La forte dispersion relative (CV > 50%) indique une grande variabilité temporelle — potentiellement liée à des régimes de fonctionnement différents.")
+            lignes.append("La forte dispersion relative (CV > 50%) indique une variabilité marquée, possiblement liée à des cycles de charge/décharge ou des événements ponctuels.")
         elif cv < 10:
-            lignes.append("La faible dispersion (CV < 10%) traduit une consommation très stable et régulière.")
+            lignes.append("La consommation est remarquablement stable, ce qui facilite la planification énergétique.")
     elif section == "📊 Visualisation":
-        lignes.append(f"Graphique sélectionné : **{info.get('graph_type', 'N/A')}**.")
+        graph_type = info.get('graph_type', 'N/A')
+        lignes.append(f"Graphique sélectionné : **{graph_type}**.")
+        if graph_type == "Scatter + régression" and info.get('corr_coef') is not None:
+            lignes.append(
+                f"La relation entre **{info.get('x_col', '?')}** et **{info.get('y_col', '?')}** est {_interprete_correlation(info['corr_coef'])}."
+            )
+            lignes.append(
+                f"La pente du régressif est {info.get('slope', 0):.3f}, suggérant {'une augmentation' if info.get('slope', 0) > 0 else 'une diminution'} de la variable Y lorsque X évolue."
+            )
+        elif graph_type == "Corrélation matricielle" and info.get('top_corr'):
+            top_corr = info['top_corr']
+            lignes.append(
+                f"Les variables les plus corrélées sont : {', '.join([f'**{k}** ({_interprete_correlation(v)})' for k, v in top_corr])}."
+            )
     elif section == "📈 Décomposition":
         p = info.get('periode_dom', np.inf)
+        resid_ratio = info.get('residu_ratio', None)
         lignes.append(
             f"Période dominante détectée : **{p:.1f} points**." if p < np.inf
-            else "Aucune période dominante claire — le signal est soit apériodique soit très bruité."
+            else "Aucune période dominante claire — le signal est soit apériodique soit fortement bruité."
         )
+        if resid_ratio is not None:
+            lignes.append(
+                f"Le composant résiduel représente **{resid_ratio:.1f}%** de la variance totale, ce qui indique {'un signal relativement stable' if resid_ratio < 40 else 'un niveau de bruit important'}."
+            )
     elif section == "🤖 Prédiction":
         if info.get('model_name'):
             r2 = info.get('r2', 0)
             lignes.append(
-                f"Modèle **{info['model_name']}** : R² = {r2:.3f} — qualité **{_label_qualite_r2(r2)}**."
+                f"Modèle **{info['model_name']}** avec {info.get('n_features', 0)} variables explicatives : R² = {r2:.3f} — qualité **{_label_qualite_r2(r2)}**."
             )
+            lignes.append(
+                f"RMSE = {info.get('rmse', 0):.3f}, MAE = {info.get('mae', 0):.3f}."
+            )
+            if r2 < 0.5:
+                lignes.append("Une amélioration des features ou un modèle plus flexible est conseillé.")
     elif section == "⚡ Bilan & DPE":
+        c = info.get('dpe_class', 'N/A')
+        consommation = info.get('conso_m2', 0)
         lignes.append(
-            f"Consommation estimée : **{info.get('conso_m2', 0):.1f} kWh/m²/an** → DPE **{info.get('dpe_class', 'N/A')}**."
+            f"Consommation estimée : **{consommation:.1f} kWh/m²/an** → DPE **{c}**."
         )
+        if info.get('dpe_range'):
+            low, high = info['dpe_range']
+            lignes.append(
+                f"Cette consommation se situe {'dans la partie basse' if consommation < (low+high)/2 else 'dans la partie haute'} de l'intervalle {low:.0f}-{high:.0f}."
+            )
     elif section == "🔍 Détection pointes":
         lignes.append(
-            f"**{info.get('n_pointes', 0)} pointes** détectées ({info.get('taux_temps', 0):.1f}% du temps)."
+            f"**{info.get('n_pointes', 0)} pointes** détectées représentant **{info.get('taux_temps', 0):.1f}%** du temps et **{info.get('energie_pointe_pct', 0):.1f}%** de l'énergie totale."
         )
+        if info.get('pointes_moyennes') is not None:
+            lignes.append(
+                f"La valeur moyenne des pointes est **{info['pointes_moyennes']:.2f}**, avec un maximum mesuré à **{info['pointes_max']:.2f}**."
+            )
     return "\n\n".join(lignes)
 
 
@@ -637,24 +694,46 @@ def generer_conclusion_automatique(section: str, info: dict) -> str:
         return generer_conclusion_msd(info)
     if section == "📋 Profil":
         cv = abs(info.get('std', 0) / info.get('mean', 1) * 100) if info.get('mean', 0) != 0 else 0
-        return (
-            f"La variable étudiée présente un profil {'stable' if cv < 20 else 'variable'} (CV = {cv:.1f}%). "
-            "Les statistiques descriptives et la distribution fournissent une base solide pour orienter les analyses suivantes."
+        skew = info.get('skew', 0)
+        conclusion = (
+            f"Le profil est {'stable' if cv < 20 else 'variable'} (CV = {cv:.1f}%). "
+            f"La distribution est {_interprete_skewness(skew)}. "
         )
+        return conclusion + "Poursuivre par une analyse de corrélation ou de modélisation selon les objectifs."
     if section == "📊 Visualisation":
-        return "Les graphiques révèlent les structures et corrélations clés sans intervention manuelle — point de départ pour toute modélisation."
+        if info.get('graph_type') == "Scatter + régression" and info.get('corr_coef') is not None:
+            return (
+                f"La relation linéaire estimée (R² ≈ {info.get('corr_coef', 0)**2:.3f}) permet de prioriser les variables explicatives fiables."
+            )
+        if info.get('graph_type') == "Corrélation matricielle" and info.get('top_corr'):
+            return (
+                "Les corrélations fortes identifiées indiquent les variables à surveiller ou à intégrer dans un modèle prédictif."
+            )
+        return "Les visualisations facilitent la détection des tendances et des structures qui orientent les actions énergétiques."
     if section == "📈 Décomposition":
-        return "La décomposition Fourier isole tendance et saisonnalité, essentielles pour la prévision et la détection d'anomalies."
+        p = info.get('periode_dom', np.inf)
+        if p < np.inf:
+            return (
+                f"Une périodicité de {p:.1f} points a été détectée — utile pour la planification et la détection de cycles."
+            )
+        return "Aucune périodicité marquée détectée, ce qui invite à surveiller la variabilité stationnaire ou les anomalies temporelles."
     if section == "🤖 Prédiction":
         r2 = info.get('r2', 0)
-        return (
-            f"Le modèle atteint un R² de {r2:.3f}. "
-            + ("Déploiement envisageable." if r2 > 0.8 else "Un enrichissement des features ou un tuning est recommandé avant déploiement.")
-        )
+        if r2 > 0.85:
+            return "Le modèle présente une qualité robuste et peut être considéré pour un premier déploiement supervisé."
+        if r2 > 0.6:
+            return "Le modèle est prometteur, mais un tuning ou des variables supplémentaires amélioreront la fiabilité."
+        return "Le modèle nécessite un enrichissement des données et une meilleure sélection des features avant usage opérationnel."
     if section == "⚡ Bilan & DPE":
-        return "Le bilan et le DPE automatiques accélèrent le diagnostic et orientent les actions d'efficacité énergétique."
+        c = info.get('dpe_class', 'N/A')
+        if c in ["A", "B", "C"]:
+            return "Le bâtiment est dans une classe performante ; poursuivre les bonnes pratiques d'efficacité énergétique."
+        return "Le DPE indique un potentiel d'amélioration important — prioriser l'isolation, le chauffage et la régulation."
     if section == "🔍 Détection pointes":
-        return "La détection automatique des pointes permet d'identifier les anomalies sans saisie manuelle et de prioriser les actions correctives."
+        return (
+            f"La détection automatique des pointes identifie les périodes critiques ({info.get('n_pointes', 0)} occurrences). "
+            "Ces événements doivent être analysés pour réduire les coûts et les surcharges."
+        )
     return "Analyse automatique complète sur les données importées."
 
 
@@ -785,6 +864,19 @@ def energy_page():
         )
         st.plotly_chart(fig_d, use_container_width=True)
 
+        summary_context.update({
+            "n_rows": df.shape[0],
+            "n_numeric": len(numeric_cols),
+            "col_prof": col_prof,
+            "mean": float(profil['Moyenne']),
+            "std": float(profil['Std']),
+            "skew": float(profil['Skewness']),
+            "kurtosis": float(profil['Kurtosis']),
+            "q10": float(profil['P10']),
+            "q90": float(profil['P90']),
+            "outliers": int(profil['Outliers IQR']),
+        })
+
 
     # ============================================================
     # TAB 2 : VISUALISATION
@@ -802,6 +894,11 @@ def energy_page():
             sel_col = st.selectbox("Variable principale", numeric_cols, key="viz_col")
 
         with col2:
+            corr_coef = None
+            slope = None
+            top_corr = None
+            x_col = None
+            y_col = None
             if graph_type == "Série temporelle":
                 fig = go.Figure()
                 series = pd.to_numeric(df[sel_col], errors='coerce')
@@ -829,6 +926,7 @@ def energy_page():
                 mask = df[[x_col, y_col]].apply(pd.to_numeric, errors='coerce').dropna()
                 if len(mask) > 2:
                     slope, intercept, r, *_ = stats.linregress(mask[x_col], mask[y_col])
+                    corr_coef = r
                     x_r = np.linspace(mask[x_col].min(), mask[x_col].max(), 200)
                     fig.add_trace(go.Scatter(
                         x=x_r, y=slope*x_r+intercept, mode='lines',
@@ -859,6 +957,9 @@ def energy_page():
                         zmid=0, text=np.round(corr.values, 2), texttemplate="%{text}",
                         colorbar=dict(tickfont=dict(color='#c0d0ff'))
                     ))
+                    flat = corr.where(np.triu(np.ones(corr.shape), k=1).astype(bool))
+                    pairs = flat.stack().sort_values(key=lambda x: x.abs(), ascending=False)
+                    top_corr = [(f"{idx[0]} vs {idx[1]}", float(val)) for idx, val in pairs.head(3).items()]
 
             else:  # Violin
                 fig = go.Figure()
@@ -877,6 +978,18 @@ def energy_page():
                 legend=dict(bgcolor='rgba(0,0,0,0.5)'), height=480,
             )
             st.plotly_chart(fig, use_container_width=True)
+
+            summary_context.update({
+                "n_rows": df.shape[0],
+                "n_numeric": len(numeric_cols),
+                "section": section,
+                "graph_type": graph_type,
+                "x_col": x_col if graph_type == 'Scatter + régression' else None,
+                "y_col": y_col if graph_type == 'Scatter + régression' else None,
+                "corr_coef": float(corr_coef) if corr_coef is not None else None,
+                "slope": float(slope) if slope is not None else None,
+                "top_corr": top_corr,
+            })
 
 
     # ============================================================
@@ -928,6 +1041,19 @@ def energy_page():
 
         if periode < np.inf:
             st.metric("Période dominante (points)", f"{periode:.1f}")
+
+        variance_original = np.var(decomp['original']) if len(decomp['original']) > 0 else 0
+        variance_residu = np.var(decomp['residu']) if len(decomp['residu']) > 0 else 0
+        resid_ratio = (variance_residu / variance_original * 100) if variance_original > 0 else None
+        summary_context.update({
+            "n_rows": df.shape[0],
+            "n_numeric": len(numeric_cols),
+            "section": section,
+            "col_dec": col_dec,
+            "periode_dom": float(periode) if periode < np.inf else np.inf,
+            "f_dom": float(decomp.get('f_dom', 0)),
+            "residu_ratio": float(resid_ratio) if resid_ratio is not None else None,
+        })
 
 
     # ============================================================
@@ -998,6 +1124,17 @@ def energy_page():
                         )
                         st.plotly_chart(fig_imp, use_container_width=True)
 
+                    summary_context.update({
+                        "n_rows": df.shape[0],
+                        "n_numeric": len(numeric_cols),
+                        "section": section,
+                        "model_name": modele_e,
+                        "n_features": len(features_e),
+                        "r2": float(res_e['r2']),
+                        "rmse": float(res_e['rmse']),
+                        "mae": float(res_e['mae']),
+                    })
+
 
     # ============================================================
     # TAB 5 : BILAN & DPE
@@ -1058,6 +1195,15 @@ def energy_page():
             ])
             st.dataframe(df_dpe, use_container_width=True)
 
+            summary_context.update({
+                "n_rows": df.shape[0],
+                "n_numeric": len(numeric_cols),
+                "section": section,
+                "conso_m2": float(conso_m2),
+                "dpe_class": classe,
+                "dpe_range": INDICATEURS_BATIMENT.get(classe, (0, 0)),
+            })
+
 
     # ============================================================
     # TAB 6 : DÉTECTION POINTES
@@ -1112,6 +1258,19 @@ def energy_page():
             )
             st.plotly_chart(fig_pt, use_container_width=True)
 
+            energy_peaks = float(s_p[pointes_mask].sum()) if n_pointes > 0 else 0.0
+            total_energy = float(s_p.sum()) if len(s_p) > 0 else 0.0
+            summary_context.update({
+                "n_rows": df.shape[0],
+                "n_numeric": len(numeric_cols),
+                "section": section,
+                "n_pointes": n_pointes,
+                "taux_temps": float(taux_temps),
+                "seuil": float(seuil),
+                "pointes_moyennes": float(s_p[pointes_mask].mean()) if n_pointes > 0 else None,
+                "pointes_max": float(s_p[pointes_mask].max()) if n_pointes > 0 else None,
+                "energie_pointe_pct": (energy_peaks / total_energy * 100) if total_energy > 0 else 0.0,
+            })
 
 
     # ============================================================
