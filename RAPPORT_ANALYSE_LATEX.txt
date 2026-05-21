@@ -1,0 +1,165 @@
+================================================================================
+RAPPORT D'ANALYSE DES FORMULES LATEX
+================================================================================
+
+
+📄 analy_numerique.py
+--------------------------------------------------------------------------------
+   Total formules: 32 | Valides: 32 | Erreurs: 0
+   ✅ Toutes les formules sont valides
+
+📄 analyse_formules_latex.py
+--------------------------------------------------------------------------------
+   Total formules: 0 | Valides: 0 | Erreurs: 0
+   ✅ Toutes les formules sont valides
+
+📄 analyse_numerique.py
+--------------------------------------------------------------------------------
+   Total formules: 16 | Valides: 16 | Erreurs: 0
+   ✅ Toutes les formules sont valides
+
+📄 automatique.py
+--------------------------------------------------------------------------------
+   Total formules: 11 | Valides: 11 | Erreurs: 0
+   ✅ Toutes les formules sont valides
+
+📄 cavity_losses.py
+--------------------------------------------------------------------------------
+   Total formules: 0 | Valides: 0 | Erreurs: 0
+   ✅ Toutes les formules sont valides
+
+📄 data_science.py
+--------------------------------------------------------------------------------
+   Total formules: 8 | Valides: 8 | Erreurs: 0
+   ✅ Toutes les formules sont valides
+
+📄 diagnostic.py
+--------------------------------------------------------------------------------
+   Total formules: 0 | Valides: 0 | Erreurs: 0
+   ✅ Toutes les formules sont valides
+
+📄 electronique_analogique.py
+--------------------------------------------------------------------------------
+   Total formules: 35 | Valides: 35 | Erreurs: 0
+   ✅ Toutes les formules sont valides
+
+📄 energy.py
+--------------------------------------------------------------------------------
+   Total formules: 12 | Valides: 12 | Erreurs: 0
+   ✅ Toutes les formules sont valides
+
+📄 equ_diff.py
+--------------------------------------------------------------------------------
+   Total formules: 12 | Valides: 12 | Erreurs: 0
+   ✅ Toutes les formules sont valides
+
+📄 gaussian.py
+--------------------------------------------------------------------------------
+   Total formules: 0 | Valides: 0 | Erreurs: 0
+   ✅ Toutes les formules sont valides
+
+📄 genere_rapport_html.py
+--------------------------------------------------------------------------------
+   Total formules: 0 | Valides: 0 | Erreurs: 0
+   ✅ Toutes les formules sont valides
+
+📄 integration.py
+--------------------------------------------------------------------------------
+   Total formules: 10 | Valides: 10 | Erreurs: 0
+   ✅ Toutes les formules sont valides
+
+📄 interpolation.py
+--------------------------------------------------------------------------------
+   Total formules: 10 | Valides: 10 | Erreurs: 0
+   ✅ Toutes les formules sont valides
+
+📄 laser_simulation.py
+--------------------------------------------------------------------------------
+   Total formules: 32 | Valides: 32 | Erreurs: 0
+   ✅ Toutes les formules sont valides
+
+📄 main.py
+--------------------------------------------------------------------------------
+   Total formules: 0 | Valides: 0 | Erreurs: 0
+   ✅ Toutes les formules sont valides
+
+📄 mecanique_fluides.py
+--------------------------------------------------------------------------------
+   Total formules: 46 | Valides: 46 | Erreurs: 0
+   ✅ Toutes les formules sont valides
+
+📄 mecanique_quantique.py
+--------------------------------------------------------------------------------
+   Total formules: 12 | Valides: 12 | Erreurs: 0
+   ✅ Toutes les formules sont valides
+
+📄 navier_stokes.py
+--------------------------------------------------------------------------------
+   Total formules: 10 | Valides: 10 | Erreurs: 0
+   ✅ Toutes les formules sont valides
+
+📄 ondes_vibrations.py
+--------------------------------------------------------------------------------
+   Total formules: 22 | Valides: 22 | Erreurs: 0
+   ✅ Toutes les formules sont valides
+
+📄 optimisation.py
+--------------------------------------------------------------------------------
+   Total formules: 39 | Valides: 39 | Erreurs: 0
+   ✅ Toutes les formules sont valides
+
+📄 optique_ondulatoire.py
+--------------------------------------------------------------------------------
+   Total formules: 23 | Valides: 23 | Erreurs: 0
+   ✅ Toutes les formules sont valides
+
+📄 physique_nucleaire.py
+--------------------------------------------------------------------------------
+   Total formules: 12 | Valides: 12 | Erreurs: 0
+   ✅ Toutes les formules sont valides
+
+📄 signal_tools.py
+--------------------------------------------------------------------------------
+   Total formules: 46 | Valides: 46 | Erreurs: 0
+   ✅ Toutes les formules sont valides
+
+📄 test_classes.py
+--------------------------------------------------------------------------------
+   Total formules: 0 | Valides: 0 | Erreurs: 0
+   ✅ Toutes les formules sont valides
+
+📄 test_mecanique_quantique.py
+--------------------------------------------------------------------------------
+   Total formules: 0 | Valides: 0 | Erreurs: 0
+   ✅ Toutes les formules sont valides
+
+📄 test_quantum.py
+--------------------------------------------------------------------------------
+   Total formules: 0 | Valides: 0 | Erreurs: 0
+   ✅ Toutes les formules sont valides
+
+📄 test_tabs.py
+--------------------------------------------------------------------------------
+   Total formules: 0 | Valides: 0 | Erreurs: 0
+   ✅ Toutes les formules sont valides
+
+📄 tmp_ast_check.py
+--------------------------------------------------------------------------------
+   Total formules: 0 | Valides: 0 | Erreurs: 0
+   ✅ Toutes les formules sont valides
+
+📄 tmp_mf_test.py
+--------------------------------------------------------------------------------
+   Total formules: 0 | Valides: 0 | Erreurs: 0
+   ✅ Toutes les formules sont valides
+
+================================================================================
+RÉSUMÉ GLOBAL
+================================================================================
+Total fichiers analysés: 30
+Total formules: 388
+Formules valides: 388
+Formules avec erreurs: 0
+
+✅ VALIDATION COMPLÈTE: TOUTES LES FORMULES SONT VALIDES ✅
+================================================================================
