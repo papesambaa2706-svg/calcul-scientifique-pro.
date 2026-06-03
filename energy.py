@@ -761,16 +761,18 @@ def energy_page():
                 0.1 * t_demo
             )
             temperature = 15 - 10 * np.cos(2*np.pi*t_demo/365) + np.random.normal(0, 3, n)
+            dates = pd.date_range("2024-01-01", periods=365, freq="D")
             df_demo = pd.DataFrame({
+                "Date": dates,
+                "Jour":             t_demo,
                 "Consommation_kWh": np.clip(consommation, 50, 500),
                 "Temperature_C":    temperature,
-                "Jour":             t_demo,
                 "Irradiation_Wh_m2": np.clip(
                     300 + 200*np.sin(2*np.pi*t_demo/365) + np.random.normal(0, 50, n), 0, 800)
             })
             st.session_state["df_energy"] = df_demo
             st.success("✅ Données démo générées (365 jours)")
-            st.dataframe(df_demo, use_container_width=True)
+            st.dataframe(df_demo, use_container_width=True, height=600)
         return
 
     try:
