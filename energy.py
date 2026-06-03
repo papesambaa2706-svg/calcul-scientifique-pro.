@@ -770,7 +770,7 @@ def energy_page():
             })
             st.session_state["df_energy"] = df_demo
             st.success("✅ Données démo générées (365 jours)")
-            st.dataframe(df_demo.head(10), use_container_width=True)
+            st.dataframe(df_demo, use_container_width=True)
         return
 
     try:
